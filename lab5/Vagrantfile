@@ -2,18 +2,27 @@ Vagrant.configure("2") do |config|
   config.vbguest.auto_update = false
   config.vm.box = "ubuntu/jammy64"
   config.vm.define "lab5"
-  
-  config.vm.provision "shell", privileged: true, path: "https://get.docker.com"
-  config.vm.provision "file", source: "./nginx", destination: "nginx", run: "always"
-  config.vm.provision "file", source: "./docker-compose.yml", destination: "docker-compose.yml", run: "always"
   config.vm.network "public_network", ip: "192.168.1.200"
 
-  config.vm.provision "shell", privileged: true, inline: <<-SHELL
-    sudo sed -i 's/#DNS=/DNS=127.0.0.1/' /etc/systemd/resolved.conf
-    sudo sed -i 's/#DNSStubListener=yes/DNSStubListener=no/' /etc/systemd/resolved.conf 
-    sudo systemctl restart systemd-resolved
-    sudo docker compose up -d
-    sudo docker build /vagrant/ -t wg-ubuntu
-    sudo docker tag wg-ubuntu registry.student:443/wg-ubuntu:latest
+  config.vm.provision "shell", path: "https://get.docker.com"
+  config.vm.provision "file", source: "./nginx", destination: "nginx", run: "always"
+  config.vm.provision "shell", inline: <<-SHELL
+    apt install mkcert
+    mkcert -ecdsa -cert-file ./nginx/certs/dns.student.pem -key-file ./nginx/certs/dns.student.key dns.student
+    mkcert -ecdsa -cert-file ./nginx/certs/registry.student.pem -key-file ./nginx/certs/registry.student.key registry.student
+    cp `mkcert -CAROOT`/rootCA.pem /vagrant/rootCA.pem
   SHELL
+  config.vm.provision "file", source: "./docker-compose.yml", destination: "docker-compose.yml", run: "always"
+  
+  config.vm.provision "shell", run: "always", inline: <<-SHELL
+    sed -i 's/#DNS=/DNS=127.0.0.1/' /etc/systemd/resolved.conf
+    sed -i 's/#DNSStubListener=yes/DNSStubListener=no/' /etc/systemd/resolved.conf
+    systemctl restart systemd-resolved
+  SHELL
+
+  config.vm.provision "shell", run: "always", inline: "docker compose up -d"
+
+  # Заходим на 192.168.1.200
+
+  #config.vm.provision "shell", run: "always", inline: "sed -i 's/rewrites: \\[\\]/rewrites:\\n    - domain: dns.student\\n      answer: 172.18.0.2\\n    - domain: registry.student\\n      answer: 172.18.0.2/' /var/lib/docker/volumes/vagrant_volume_dns_home/_data/AdGuardHome.yaml"
 end

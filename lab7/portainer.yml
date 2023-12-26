@@ -1,0 +1,36 @@
+services:
+  agent:
+    image: portainer/agent
+    networks:
+      - agent_network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == linux
+    environment:
+      AGENT_CLUSTER_ADDR: tasks.agent
+
+  portainer:
+    image: portainer/portainer
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    ports:
+      - 1102:9000
+    volumes:
+      - portainer_data:/data
+    networks:
+      - agent_network
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == manger1
+
+networks:
+  agent_network:
+    driver: overlay
+
+volumes:
+  portainer_data:

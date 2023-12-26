@@ -1,0 +1,7 @@
+mkdir auth
+sudo apt install -y apache2-utils
+htpasswd -Bbn user user > auth/htpasswd
+sudo docker login registry.student:443
+sudo docker push registry.student:443/wg-ubuntu:latest
+sudo docker pull registry.student:443/wg-ubutu:latest
+

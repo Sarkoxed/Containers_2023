@@ -1,0 +1,3 @@
+[submodule "lab8/docker-bench-security"]
+	path = lab8/docker-bench-security
+	url = /home/sarkoxedaf/Working/University/2023/containers/lab8/docker-bench-security

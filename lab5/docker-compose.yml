@@ -1,0 +1,71 @@
+services:
+  dns:
+    container_name: dns
+    image: adguard/adguardhome:latest
+    ports:
+      - 53:53/udp
+      - 53:53/tcp
+      - 3000:3000
+    networks:
+      - lab5_network
+    restart: unless-stopped
+    volumes:
+      - volume_dns_work:/opt/adguardhome/work
+      - volume_dns_home:/opt/adguardhome/conf
+    hostname: dns
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+ 
+  nginx:
+    container_name: web
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/conf/app.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/ssl
+    networks:
+      - lab5_network
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    depends_on:
+      - dns
+      - registry
+    hostname: web
+
+  registry:
+    container_name: registry
+    hostname: registry
+    image: registry:2
+    networks:
+      - lab5_network
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    restart: unless-stopped
+    depends_on:
+      - dns
+    environment:
+      - REGISTRY_AUTH=htpasswd
+      - "REGISTRY_AUTH_HTPASSWD_REALM=Regstry Realm"
+      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+    volumes:
+      - ./auth:/auth
+
+networks:
+  lab5_network:
+    driver: bridge
+
+volumes:
+  volume_dns_work:
+  volume_dns_home:

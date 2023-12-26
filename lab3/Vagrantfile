@@ -1,0 +1,33 @@
+Vagrant.configure("2") do |config|
+  config.vbguest.auto_update = false
+  config.vm.box = "ubuntu/jammy64"
+  
+  config.vm.provision "shell", privileged: true, path: "https://get.docker.com"
+  config.vm.provision "shell", privileged: true, inline: <<-SHELL
+    sudo apt -y install git
+    git clone https://github.com/docker/getting-started.git
+  SHELL
+    
+  config.vm.define "Dockerfile" do |df|
+    df.vm.network "forwarded_port", guest: 3000, host: 3000
+    df.vm.provision "shell", inline: <<-SHELL
+      cp /vagrant/.vagrant/Dockerfile getting-started/app/Dockerfile
+      cd getting-started/app
+      sudo docker build . -t getting-started
+      sudo docker run -dp 3000:3000 getting-started
+
+      sudo docker network create todo-app
+      sudo docker run -d --network todo-app --network-alias mysql -v todo-mysql-mysql-data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=todos mysql:8.0
+      sudo docker pull nicolaka/netshoot
+    SHELL
+  end
+
+  config.vm.define "Docker-Compose" do |dc|
+    dc.vm.network "forwarded_port", guest: 3000, host: 3001
+    dc.vm.provision "shell", inline: <<-SHELL
+      cp /vagrant/.vagrant/docker-compose.yml getting-started/app/docker-compose.yml
+      cd getting-started/app
+      sudo docker compose up -d
+    SHELL
+  end
+end

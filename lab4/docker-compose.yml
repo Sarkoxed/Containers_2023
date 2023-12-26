@@ -1,0 +1,23 @@
+services:
+  wg-dashboard:
+    build:
+      dockerfile: ./Dockerfile
+    ports:
+      - 10086:10086
+      - 51820:51820
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - wg-networks
+    volumes:
+      - ./wireguard:/etc/wireguard
+    restart: unless-stopped
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+networks:
+  wg-networks:

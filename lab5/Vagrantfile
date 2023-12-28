@@ -5,24 +5,37 @@ Vagrant.configure("2") do |config|
   config.vm.network "public_network", ip: "192.168.1.200"
 
   config.vm.provision "shell", path: "https://get.docker.com"
-  config.vm.provision "file", source: "./nginx", destination: "nginx", run: "always"
+  config.vm.provision "file", source: "./nginx", destination: "nginx"
   config.vm.provision "shell", inline: <<-SHELL
     apt install mkcert
     mkcert -ecdsa -cert-file ./nginx/certs/dns.student.pem -key-file ./nginx/certs/dns.student.key dns.student
     mkcert -ecdsa -cert-file ./nginx/certs/registry.student.pem -key-file ./nginx/certs/registry.student.key registry.student
+    mkcert -install
     cp `mkcert -CAROOT`/rootCA.pem /vagrant/rootCA.pem
   SHELL
-  config.vm.provision "file", source: "./docker-compose.yml", destination: "docker-compose.yml", run: "always"
+  config.vm.provision "file", source: "./docker-compose.yml", destination: "docker-compose.yml"
   
-  config.vm.provision "shell", run: "always", inline: <<-SHELL
+  config.vm.provision "shell", inline: <<-SHELL
     sed -i 's/#DNS=/DNS=127.0.0.1/' /etc/systemd/resolved.conf
     sed -i 's/#DNSStubListener=yes/DNSStubListener=no/' /etc/systemd/resolved.conf
     systemctl restart systemd-resolved
   SHELL
 
-  config.vm.provision "shell", run: "always", inline: "docker compose up -d"
-
-  # Заходим на 192.168.1.200
+  config.vm.provision "shell", inline: <<-SHELL
+    docker build /vagrant/ -t wgdashboard
+    docker tag wgdashboard registry.student:443/wgdashboard:latest
+    mkdir auth
+    apt install -y apache2-utils
+    htpasswd -Bbn user user > auth/htpasswd
+  SHELL
+  
+  config.vm.provision "shell", inline: "docker compose up -d"
+  
+  # Заходим на 192.168.1.200:3000 - выставляем днс
+  #config.vm.provision "shell", run: "always", inline: <<-SHELL
+  #  docker login registry.student:443 -u user -p user
+  #  docker push registry.student:443/wgdashboard:latest
+  #SHELL
 
   #config.vm.provision "shell", run: "always", inline: "sed -i 's/rewrites: \\[\\]/rewrites:\\n    - domain: dns.student\\n      answer: 172.18.0.2\\n    - domain: registry.student\\n      answer: 172.18.0.2/' /var/lib/docker/volumes/vagrant_volume_dns_home/_data/AdGuardHome.yaml"
 end

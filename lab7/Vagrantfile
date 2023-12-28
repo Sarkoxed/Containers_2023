@@ -8,13 +8,12 @@ Vagrant.configure("2") do |config|
     m1.vm.provider "virtualbox" do |vb|
       vb.name = "m11"
     end
-    m1.vm.network "public_network", ip: "172.1.0.20"
     m1.vm.network "forwarded_port", guest: 1101, host: 1101
     m1.vm.network "forwarded_port", guest: 1102, host: 1102
     m1.vm.network "forwarded_port", guest: 1103, host: 1103
-    m1.vm.network "private_network", ip: "192.168.56.10"
+    m1.vm.network "private_network", ip: "3.22.111.10"
     m1.vm.hostname = "manger1"
-    m1.vm.provision "shell", privileged: true, inline: "docker swarm init --advertise-addr 192.168.56.10"
+    m1.vm.provision "shell", privileged: true, inline: "docker swarm init --advertise-addr 3.22.111.10"
     m1.vm.provision "shell", privileged: true, inline: "docker swarm join-token worker -q > /vagrant/swarm_token" 
 
     m1.vm.provision "shell", privileged: true, inline: <<-SHELL
@@ -29,11 +28,11 @@ Vagrant.configure("2") do |config|
       w.vm.provider "virtualbox" do |vb|
         vb.name = "w#{i}"
       end
-      w.vm.network "private_network", ip: "192.168.56.2#{i}"
+      w.vm.network "private_network", ip: "3.22.111.1#{i}"
       w.vm.hostname = "worker#{i}"
      
       w.vm.provision "shell", privileged: true, inline: <<-SHELL
-        docker swarm join --token `cat /vagrant/swarm_token` 192.168.56.10:2377
+        docker swarm join --token `cat /vagrant/swarm_token` 3.22.111.10:2377
       SHELL
     end
   end
